@@ -1,0 +1,13 @@
+#currencyConverterBox {
+	border: 2px solid #444;
+	font-weight: 700;
+}
+
+#toCurrencyValue {
+	font-size: 2em;
+	font-weight: 700;
+}
+
+table {
+	width: 100%;
+}
