@@ -14,31 +14,42 @@ class CurrencyApp extends React.Component {
       base: 'USD',
       date: '',
       rates: {},
-      conversionCurrency: 'EUR',
-      result: ''
+      conversionCurrency: 'AUD',
+      result: '',
+      fromCurrencyList: [],
+      toCurrencyList: []
     };
 
+    this.updateCurrencyList = this.updateCurrencyList.bind(this);
     this.convertAmount = this.convertAmount.bind(this);
     this.handleAmountChange = this.handleAmountChange.bind(this);
+    this.handleFromCurrencyChange = this.handleFromCurrencyChange.bind(this);
+    this.handleToCurrencyChange = this.handleToCurrencyChange.bind(this);
   }
 
   componentDidMount () {
-    fetch(`https://altexchangerateapi.herokuapp.com/latest?from=USD`)
-      .then(checkStatus)
-      .then(json)
-      .then((data) => {
-        this.setState({
-          amount: data.amount,
-          base: data.base,
-          date: data.date,
-          rates: data.rates,
-          result: data.rates[this.state.conversionCurrency]
-        });
-      })
-      .catch((error) => {
-        this.setState({ error: error.message });
-        console.log(error);
-      })
+    this.updateCurrencyList('USD');
+  }
+
+  updateCurrencyList (baseCurrency) {
+    fetch(`https://altexchangerateapi.herokuapp.com/latest?from=${baseCurrency}`)
+    .then(checkStatus)
+    .then(json)
+    .then((data) => {
+      this.setState({
+        amount: data.amount,
+        base: data.base,
+        date: data.date,
+        rates: data.rates,
+        result: data.rates[this.state.conversionCurrency],
+        fromCurrencyList: [data.base, ...Object.keys(data.rates).filter(e => e !== this.state.conversionCurrency)],
+        toCurrencyList: [...Object.keys(data.rates)]
+      });
+    })
+    .catch((error) => {
+      this.setState({ error: error.message });
+      console.log(error);
+    })
   }
 
   convertAmount (amount, rate) {
@@ -53,15 +64,44 @@ class CurrencyApp extends React.Component {
       });
       return;
     }
-    const result = this.convertAmount(input, this.state.rates[this.state.conversionCurrency]).toFixed(4);
+    const result = this.convertAmount(input, this.state.rates[this.state.toCurrencyList[0]]).toFixed(4);
     this.setState({
       amount: input,
       result
     });
   }
 
+  handleFromCurrencyChange (event) {
+    this.updateCurrencyList(event.target.value);
+    document.getElementById("fromCurrency").selectedIndex = "0";
+  }
+
+  handleToCurrencyChange (event) {
+    let fromTempList = this.state.fromCurrencyList;
+    fromTempList = this.state.fromCurrencyList.filter(e => e !== event.target.value);
+    let fromTempList2 = fromTempList.slice(1)
+    fromTempList2.unshift(this.state.toCurrencyList[0]);
+    fromTempList2.sort();
+    fromTempList = [fromTempList[0], ...fromTempList2];
+
+    let toTempList = this.state.toCurrencyList;
+    toTempList = this.state.toCurrencyList.filter(e => e !== event.target.value).sort();
+    toTempList.unshift(event.target.value);
+
+
+    const result = this.convertAmount(this.state.amount, this.state.rates[event.target.value]).toFixed(4);
+    this.setState({
+        conversionCurrency: event.target.value,
+        toCurrencyList: toTempList,
+        fromCurrencyList: fromTempList,
+        result
+      });
+
+    document.getElementById("toCurrency").selectedIndex = "0";
+  }
+
   render () {
-    const { amount, base, rates, conversionCurrency, result } = this.state;
+    const { amount, base, rates, result, fromCurrencyList, toCurrencyList } = this.state;
     return (
       <div>
         <div className="container p-4 my-4" id="currencyConverterBox">
@@ -72,8 +112,12 @@ class CurrencyApp extends React.Component {
             </div>
             <div className="col-2">
               <p>From</p>
-              <select id="fromCurrency">
-                <option value="{base}">{base}</option>
+              <select id="fromCurrency" onChange={this.handleFromCurrencyChange}>
+                {fromCurrencyList.map(key => {
+                  return (
+                    <option value={key}>{key}</option>
+                  )
+                })}
               </select>
             </div>
             <div className="col-2">
@@ -81,8 +125,12 @@ class CurrencyApp extends React.Component {
             </div>
             <div className="col-2">
               <p>To</p>
-              <select id="toCurrency">
-                <option value="{conversionCurrency}">{conversionCurrency}</option>
+              <select id="toCurrency" onChange={this.handleToCurrencyChange}>
+                {toCurrencyList.map(key => {
+                  return (
+                    <option value={key}>{key}</option>
+                  )
+                })}
               </select>
             </div>
             <div className="col-3">
