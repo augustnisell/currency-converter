@@ -25,10 +25,12 @@ class CurrencyApp extends React.Component {
     this.handleAmountChange = this.handleAmountChange.bind(this);
     this.handleFromCurrencyChange = this.handleFromCurrencyChange.bind(this);
     this.handleToCurrencyChange = this.handleToCurrencyChange.bind(this);
+    this.handleSwap = this.handleSwap.bind(this);
+    this.numberWithCommas = this.numberWithCommas.bind(this);
   }
 
   componentDidMount () {
-    this.updateCurrencyList('USD');
+    this.updateCurrencyList(this.state.base);
   }
 
   updateCurrencyList (baseCurrency) {
@@ -37,13 +39,20 @@ class CurrencyApp extends React.Component {
     .then(json)
     .then((data) => {
       this.setState({
-        amount: data.amount,
         base: data.base,
         date: data.date,
         rates: data.rates,
-        result: data.rates[this.state.conversionCurrency],
+        result: this.convertAmount(this.state.amount, data.rates[this.state.conversionCurrency]).toFixed(4),
         fromCurrencyList: [data.base, ...Object.keys(data.rates).filter(e => e !== this.state.conversionCurrency)],
         toCurrencyList: [...Object.keys(data.rates)]
+      });
+    })
+    .then((data) => {
+      let toTempList = this.state.toCurrencyList;
+      toTempList = this.state.toCurrencyList.filter(e => e !== this.state.conversionCurrency).sort();
+      toTempList.unshift(this.state.conversionCurrency);
+      this.setState({
+        toCurrencyList: toTempList
       });
     })
     .catch((error) => {
@@ -100,17 +109,46 @@ class CurrencyApp extends React.Component {
     document.getElementById("toCurrency").selectedIndex = "0";
   }
 
+  handleSwap (event) {
+    const base = this.state.conversionCurrency;
+    const target = this.state.base;
+    let toTempList = this.state.fromCurrencyList;
+
+    const swapAfterFetch = new Promise((resolve, reject) => {
+      this.setState({
+          conversionCurrency: target,
+        });
+      this.updateCurrencyList(base);
+      setTimeout(() => {
+        resolve();
+      }, 100);
+    })
+
+    swapAfterFetch.then(() => {
+      const result = this.convertAmount(this.state.amount, this.state.rates[target]).toFixed(4);
+      this.setState({
+          conversionCurrency: target,
+          toCurrencyList: toTempList,
+          result
+        });
+      })
+  }
+
+  numberWithCommas (x) {
+    return x.toString().replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ",");
+  }
+
   render () {
     const { amount, base, rates, result, fromCurrencyList, toCurrencyList } = this.state;
     return (
       <div>
         <div className="container p-4 my-4" id="currencyConverterBox">
           <div className="row text-center">
-            <div className="col-3">
+            <div className="col-4">
               <p>Amount</p>
               <input value={amount} onChange={this.handleAmountChange} type="number" />
             </div>
-            <div className="col-2">
+            <div className="col-1">
               <p>From</p>
               <select id="fromCurrency" onChange={this.handleFromCurrencyChange}>
                 {fromCurrencyList.map(key => {
@@ -121,9 +159,9 @@ class CurrencyApp extends React.Component {
               </select>
             </div>
             <div className="col-2">
-              <FontAwesomeIcon icon={faExchangeAlt} size="2x" />
+              <FontAwesomeIcon icon={faExchangeAlt} size="2x" onClick={this.handleSwap} />
             </div>
-            <div className="col-2">
+            <div className="col-1">
               <p>To</p>
               <select id="toCurrency" onChange={this.handleToCurrencyChange}>
                 {toCurrencyList.map(key => {
@@ -133,8 +171,8 @@ class CurrencyApp extends React.Component {
                 })}
               </select>
             </div>
-            <div className="col-3">
-              <div id="toCurrencyValue">{result}</div>
+            <div className="col-4">
+              <div id="toCurrencyValue">{this.numberWithCommas(result)}</div>
             </div>
           </div>
         </div>
