@@ -42,7 +42,7 @@ class CurrencyApp extends React.Component {
         base: data.base,
         date: data.date,
         rates: data.rates,
-        result: this.convertAmount(this.state.amount, data.rates[this.state.conversionCurrency]).toFixed(4),
+        result: this.convertAmount(this.state.amount, data.rates[this.state.conversionCurrency]),
         fromCurrencyList: [data.base, ...Object.keys(data.rates).filter(e => e !== this.state.conversionCurrency)],
         toCurrencyList: [...Object.keys(data.rates)]
       });
@@ -62,7 +62,25 @@ class CurrencyApp extends React.Component {
   }
 
   convertAmount (amount, rate) {
-    return amount * rate;
+    let convertedAmount = amount * rate;
+    switch (true) {
+      case (convertedAmount <10):
+        convertedAmount = convertedAmount.toFixed(4);
+        break;
+      case (convertedAmount >10 && convertedAmount <100):
+        convertedAmount = convertedAmount.toFixed(3);
+        break;
+      case (convertedAmount >100 && convertedAmount <1000):
+        convertedAmount = convertedAmount.toFixed(2);
+        break;
+      case (convertedAmount >1000 && convertedAmount <10000):
+        convertedAmount = convertedAmount.toFixed(1);
+        break;
+      default:
+        convertedAmount = convertedAmount.toFixed(0);
+        break;
+    }
+    return convertedAmount;
   }
 
   handleAmountChange (event) {
@@ -73,7 +91,7 @@ class CurrencyApp extends React.Component {
       });
       return;
     }
-    const result = this.convertAmount(input, this.state.rates[this.state.toCurrencyList[0]]).toFixed(4);
+    const result = this.convertAmount(input, this.state.rates[this.state.toCurrencyList[0]]);
     this.setState({
       amount: input,
       result
@@ -98,7 +116,7 @@ class CurrencyApp extends React.Component {
     toTempList.unshift(event.target.value);
 
 
-    const result = this.convertAmount(this.state.amount, this.state.rates[event.target.value]).toFixed(4);
+    const result = this.convertAmount(this.state.amount, this.state.rates[event.target.value]);
     this.setState({
         conversionCurrency: event.target.value,
         toCurrencyList: toTempList,
@@ -125,7 +143,7 @@ class CurrencyApp extends React.Component {
     })
 
     swapAfterFetch.then(() => {
-      const result = this.convertAmount(this.state.amount, this.state.rates[target]).toFixed(4);
+      const result = this.convertAmount(this.state.amount, this.state.rates[target]);
       this.setState({
           conversionCurrency: target,
           toCurrencyList: toTempList,
@@ -139,16 +157,16 @@ class CurrencyApp extends React.Component {
   }
 
   render () {
-    const { amount, base, rates, result, fromCurrencyList, toCurrencyList } = this.state;
+    const { amount, base, date, rates, result, fromCurrencyList, toCurrencyList } = this.state;
     return (
       <div>
         <div className="container p-4 my-4" id="currencyConverterBox">
           <div className="row text-center">
-            <div className="col-4">
+            <div className="col-12 col-md-4 p-3">
               <p>Amount</p>
               <input value={amount} onChange={this.handleAmountChange} type="number" />
             </div>
-            <div className="col-1">
+            <div className="col-4 col-md-1 p-3">
               <p>From</p>
               <select id="fromCurrency" onChange={this.handleFromCurrencyChange}>
                 {fromCurrencyList.map(key => {
@@ -158,10 +176,10 @@ class CurrencyApp extends React.Component {
                 })}
               </select>
             </div>
-            <div className="col-2">
+            <div className="col-4 col-md-2 my-auto p-3">
               <FontAwesomeIcon icon={faExchangeAlt} size="2x" onClick={this.handleSwap} />
             </div>
-            <div className="col-1">
+            <div className="col-4 col-md-1 p-3">
               <p>To</p>
               <select id="toCurrency" onChange={this.handleToCurrencyChange}>
                 {toCurrencyList.map(key => {
@@ -171,14 +189,15 @@ class CurrencyApp extends React.Component {
                 })}
               </select>
             </div>
-            <div className="col-4">
+            <div className="col-12 col-md-4 p-3 my-auto">
               <div id="toCurrencyValue">{this.numberWithCommas(result)}</div>
             </div>
           </div>
         </div>
-        <div className="container p-4 my-4">
+        <div className="container mt-4">
           <div className="row text-center">
             <div className="col-12">
+              <h3 className="mb-4"><b>Today's date: </b>{date}</h3>
               <table className="table">
                 <thead>
                   <tr>

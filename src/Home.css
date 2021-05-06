@@ -1,6 +1,7 @@
 #currencyConverterBox {
 	border: 2px solid #444;
 	font-weight: 700;
+	background-color: #eee9;
 }
 
 #toCurrencyValue {
@@ -14,4 +15,19 @@ table {
 
 td {
 	width: 33%; 
+}
+
+thead {
+	font-size: 1.15em;
+	background-color: #eee9;
+}
+
+h3 {
+	font-size: 24px;
+}
+
+@media all and (max-width: 767px) {
+  #root {
+    font-size: 1.4em;
+  }
 }
