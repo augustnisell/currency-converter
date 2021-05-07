@@ -1,5 +1,6 @@
 import React from 'react';
 import { json, checkStatus } from './utils';
+import Chart from 'chart.js';
 import './Home.css';
 
 // FontAwesome
@@ -9,6 +10,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 class CurrencyApp extends React.Component {
   constructor(props) {
     super(props);
+    const params = new URLSearchParams(props.location.search);
     this.state = {
       amount: 1.00,
       base: 'USD',
@@ -27,10 +29,13 @@ class CurrencyApp extends React.Component {
     this.handleToCurrencyChange = this.handleToCurrencyChange.bind(this);
     this.handleSwap = this.handleSwap.bind(this);
     this.numberWithCommas = this.numberWithCommas.bind(this);
+
+    this.chartRef = React.createRef();
   }
 
   componentDidMount () {
     this.updateCurrencyList(this.state.base);
+    this.getHistoricalRates(this.state.base, this.state.conversionCurrency);
   }
 
   updateCurrencyList (baseCurrency) {
@@ -100,6 +105,7 @@ class CurrencyApp extends React.Component {
 
   handleFromCurrencyChange (event) {
     this.updateCurrencyList(event.target.value);
+    this.getHistoricalRates(event.target.value, this.state.conversionCurrency);
     document.getElementById("fromCurrency").selectedIndex = "0";
   }
 
@@ -124,6 +130,7 @@ class CurrencyApp extends React.Component {
         result
       });
 
+    this.getHistoricalRates(this.state.base, event.target.value);
     document.getElementById("toCurrency").selectedIndex = "0";
   }
 
@@ -150,6 +157,7 @@ class CurrencyApp extends React.Component {
           result
         });
       })
+    this.getHistoricalRates(this.state.conversionCurrency, this.state.base);
   }
 
   numberWithCommas (x) {
@@ -160,10 +168,53 @@ class CurrencyApp extends React.Component {
     }
   }
 
+  getHistoricalRates = (base, quote) => {
+    const endDate = new Date().toISOString().split('T')[0];
+    const startDate = new Date((new Date).getTime() - (30 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0];
+    fetch(`https://altexchangerateapi.herokuapp.com/${startDate}..${endDate}?from=${base}&to=${quote}`)
+      .then(checkStatus)
+      .then(json)
+      .then(data => {
+        if (data.error) {
+          throw new Error(data.error);
+        }
+        const chartLabels = Object.keys(data.rates);
+        const chartData = Object.values(data.rates).map(rate => rate[quote]);
+        const chartLabel = `${base}/${quote}`;
+        this.buildChart(chartLabels, chartData, chartLabel);
+      })
+      .catch(error => console.error(error.message));
+  }
+
+  buildChart = (labels, data, label) => {
+    const chartRef = this.chartRef.current.getContext("2d");
+    if (typeof this.chart !== "undefined") {
+      this.chart.destroy();
+    }
+    this.chart = new Chart(this.chartRef.current.getContext("2d"), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: label,
+            data,
+            fill: false,
+            tension: 0,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+      }
+    })
+  }
+
   render () {
     const { amount, base, date, rates, result, fromCurrencyList, toCurrencyList } = this.state;
     return (
       <div>
+        <h3 className="my-4 text-center"><b>Today's date: </b>{date}</h3>
         <div className="container p-4 my-4" id="currencyConverterBox">
           <div className="row text-center">
             <div className="col-12 col-md-4 p-3">
@@ -199,9 +250,11 @@ class CurrencyApp extends React.Component {
           </div>
         </div>
         <div className="container mt-4">
+          <div className="mb-5">
+            <canvas ref={this.chartRef} />
+          </div>
           <div className="row text-center">
             <div className="col-12">
-              <h3 className="mb-4"><b>Today's date: </b>{date}</h3>
               <table className="table">
                 <thead>
                   <tr>
